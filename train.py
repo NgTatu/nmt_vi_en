@@ -50,7 +50,8 @@ def train():
             with torch.no_grad():
                 metric.add(l.sum(), num_tokens)
         if (epoch + 1) % 10 == 0:
-            animator.add(epoch + 1, (metric[0] / metric[1],))
+            # animator.add(epoch + 1, (metric[0] / metric[1],))
+            print(f'epoch {epoch+1} - ' f'loss {metric[0] / metric[1]:.3f}')
     print(f'loss {metric[0] / metric[1]:.3f}, {metric[1] / timer.stop():.1f} '
           f'tokens/sec on {str(device)}')
 
