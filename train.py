@@ -3,7 +3,7 @@ from d2l import torch as d2lt
 from torch import nn
 from dataset import load_data_nmt
 from model import Seq2SeqEncoder, Seq2SeqDecoder, EncoderDecoder
-from nmt_vi_en.loss import MaskedSoftmaxCELoss
+from loss import MaskedSoftmaxCELoss
 
 
 def train():
