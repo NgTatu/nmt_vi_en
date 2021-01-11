@@ -1,12 +1,12 @@
 import torch
 import os
 from d2l import torch as d2lt
-
+from pyvi import ViTokenizer
 
 def read_data_nmt():
     """Load the English-French dataset."""
-    data_dir = d2lt.download_extract('fra-eng')
-    with open(os.path.join(data_dir, 'fra.txt'), 'r') as f:
+    # data_dir = d2lt.download_extract('fra-eng')
+    with open("/content/en_vi_train.txt", 'r') as f:
         return f.read()
 
 
@@ -33,7 +33,8 @@ def tokenize_nmt(text, num_examples=None):
         parts = line.split('\t')
         if len(parts) == 2:
             source.append(parts[0].split(' '))
-            target.append(parts[1].split(' '))
+            segmented = ViTokenizer.tokenize(parts[1])
+            target.append(segmented.split(' '))
     return source, target
 
 

@@ -1,7 +1,7 @@
 import torch
 from d2l import torch as d2lt
 from torch import nn
-
+import math
 
 class Seq2SeqEncoder(d2lt.Encoder):
     """The RNN encoder for sequence to sequence learning."""
@@ -50,6 +50,114 @@ class Seq2SeqDecoder(d2lt.Decoder):
         # `state` shape: (`num_layers`, `batch_size`, `num_hiddens`)
         return output, state
 
+
+class EncoderBlock(nn.Module):
+    def __init__(self, key_size, query_size, value_size, num_hiddens,
+                 norm_shape, ffn_num_input, ffn_num_hiddens, num_heads,
+                 dropout, use_bias=False, **kwargs):
+        super(EncoderBlock, self).__init__(**kwargs)
+        self.attention = d2lt.MultiHeadAttention(key_size, query_size, value_size,
+                                            num_hiddens, num_heads, dropout,
+                                            use_bias)
+        self.addnorm1 = d2lt.AddNorm(norm_shape, dropout)
+        self.ffn = d2lt.PositionWiseFFN(
+            ffn_num_input, ffn_num_hiddens, num_hiddens)
+        self.addnorm2 = d2lt.AddNorm(norm_shape, dropout)
+
+
+
+    def forward(self, X, valid_len):
+        Y = self.addnorm1(X, self.attention(X, X, X, valid_len))
+        return self.addnorm2(Y, self.ffn(Y))
+
+
+class TransformerEncoder(d2lt.Encoder):
+    def __init__(self, vocab_size, key_size, query_size, value_size,
+                 num_hiddens, norm_shape, ffn_num_input, ffn_num_hiddens,
+                 num_heads, num_layers, dropout, use_bias=False, **kwargs):
+        super(TransformerEncoder, self).__init__(**kwargs)
+        self.num_hiddens = num_hiddens
+        self.embedding = nn.Embedding(vocab_size, num_hiddens)
+        self.pos_encoding = d2lt.PositionalEncoding(num_hiddens, dropout)
+        self.blks = nn.Sequential()
+        for i in range(num_layers):
+            self.blks.add_module("block"+str(i),
+                EncoderBlock(key_size, query_size, value_size, num_hiddens,
+                             norm_shape, ffn_num_input, ffn_num_hiddens,
+                             num_heads, dropout, use_bias))
+
+    def forward(self, X, valid_len, *args):
+        X = self.pos_encoding(self.embedding(X) * math.sqrt(self.num_hiddens))
+        for blk in self.blks:
+            X = blk(X, valid_len)
+        return X
+
+
+class DecoderBlock(nn.Module):
+    # `i` means it is the i-th block in the decoder
+    def __init__(self, key_size, query_size, value_size, num_hiddens,
+                 norm_shape, ffn_num_input, ffn_num_hiddens, num_heads,
+                 dropout, i, **kwargs):
+        super(DecoderBlock, self).__init__(**kwargs)
+        self.i = i
+        self.attention1 = d2lt.MultiHeadAttention(key_size, query_size, value_size,
+                                             num_hiddens, num_heads, dropout)
+        self.addnorm1 = d2lt.AddNorm(norm_shape, dropout)
+        self.attention2 = d2lt.MultiHeadAttention(key_size, query_size, value_size,
+                                             num_hiddens, num_heads, dropout)
+        self.addnorm2 = d2lt.AddNorm(norm_shape, dropout)
+        self.ffn = d2lt.PositionWiseFFN(ffn_num_input, ffn_num_hiddens,
+                                   num_hiddens)
+        self.addnorm3 = d2lt.AddNorm(norm_shape, dropout)
+
+    def forward(self, X, state):
+        enc_outputs, enc_valid_len = state[0], state[1]
+        # `state[2][i]` contains the past queries for this block
+        if state[2][self.i] is None:
+            key_values = X
+        else:
+            key_values = torch.cat((state[2][self.i], X), axis=1)
+        state[2][self.i] = key_values
+        if self.training:
+            batch_size, seq_len, _ = X.shape
+            # Shape: (batch_size, seq_len), the values in the j-th column
+            # are j+1
+            valid_len = torch.arange(1, seq_len + 1, device=X.device).repeat(batch_size, 1)
+        else:
+            valid_len = None
+
+        X2 = self.attention1(X, key_values, key_values, valid_len)
+        Y = self.addnorm1(X, X2)
+        Y2 = self.attention2(Y, enc_outputs, enc_outputs, enc_valid_len)
+        Z = self.addnorm2(Y, Y2)
+        return self.addnorm3(Z, self.ffn(Z)), state
+
+
+class TransformerDecoder(d2lt.Decoder):
+    def __init__(self, vocab_size, key_size, query_size, value_size,
+                 num_hiddens, norm_shape, ffn_num_input, ffn_num_hiddens,
+                 num_heads, num_layers, dropout, **kwargs):
+        super(TransformerDecoder, self).__init__(**kwargs)
+        self.num_hiddens = num_hiddens
+        self.num_layers = num_layers
+        self.embedding = nn.Embedding(vocab_size, num_hiddens)
+        self.pos_encoding = d2lt.PositionalEncoding(num_hiddens, dropout)
+        self.blks = nn.Sequential()
+        for i in range(num_layers):
+            self.blks.add_module("block"+str(i),
+                DecoderBlock(key_size, query_size, value_size, num_hiddens,
+                             norm_shape, ffn_num_input, ffn_num_hiddens,
+                             num_heads, dropout, i))
+        self.dense = nn.Linear(num_hiddens, vocab_size)
+
+    def init_state(self, enc_outputs, env_valid_len, *args):
+        return [enc_outputs, env_valid_len, [None]*self.num_layers]
+
+    def forward(self, X, state):
+        X = self.pos_encoding(self.embedding(X) * math.sqrt(self.num_hiddens))
+        for blk in self.blks:
+            X, state = blk(X, state)
+        return self.dense(X), state
 
 class EncoderDecoder(nn.Module):
     """The base class for the encoder-decoder architecture."""

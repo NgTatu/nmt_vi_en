@@ -2,7 +2,7 @@ import torch
 from d2l import torch as d2lt
 from torch import nn
 from dataset import load_data_nmt
-from model import Seq2SeqEncoder, Seq2SeqDecoder, EncoderDecoder
+from model import Seq2SeqEncoder, Seq2SeqDecoder, TransformerEncoder, TransformerDecoder, EncoderDecoder
 from loss import MaskedSoftmaxCELoss
 from CONFIG import *
 from pathlib import Path
@@ -22,17 +22,24 @@ def xavier_init_weights(m):
 
 
 def train(resume_training=True):
-    """Train a model for sequence to sequence (defined in Chapter 9)."""
-    embed_size, num_hiddens, num_layers, dropout = 32, 32, 2, 0.1
-    batch_size, num_steps = 64, 10
+
+    EMBEDDING_SIZE = 32
+    num_hiddens, num_layers, dropout, batch_size, num_steps = EMBEDDING_SIZE, 2, 0.1, 64, 10
     lr, num_epochs, device = 0.005, 300, d2lt.try_gpu()
+    ffn_num_input, ffn_num_hiddens, num_heads = EMBEDDING_SIZE, 64, 4
+    key_size, query_size, value_size = EMBEDDING_SIZE, EMBEDDING_SIZE, EMBEDDING_SIZE
+    norm_shape = [EMBEDDING_SIZE]
 
     ### Load data
     data_iter, src_vocab, tgt_vocab = load_data_nmt(batch_size, num_steps)
-    encoder = Seq2SeqEncoder(
-        len(src_vocab), embed_size, num_hiddens, num_layers, dropout)
-    decoder = Seq2SeqDecoder(
-        len(tgt_vocab), embed_size, num_hiddens, num_layers, dropout)
+    encoder = TransformerEncoder(
+        len(src_vocab), key_size, query_size, value_size, num_hiddens,
+        norm_shape, ffn_num_input, ffn_num_hiddens, num_heads,
+        num_layers, dropout)
+    decoder = TransformerDecoder(
+        len(tgt_vocab), key_size, query_size, value_size, num_hiddens,
+        norm_shape, ffn_num_input, ffn_num_hiddens, num_heads,
+        num_layers, dropout)
 
     ### Load model
     model = EncoderDecoder(encoder, decoder).to(device)
