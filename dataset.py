@@ -59,7 +59,7 @@ def build_array_nmt(lines, vocab, num_steps):
 def load_data_nmt(batch_size, num_steps, num_examples=600):
     """Return the iterator and the vocabularies of the translation dataset."""
     text = preprocess_nmt(read_data_nmt())
-    source, target = tokenize_nmt(text, num_examples)
+    source, target = tokenize_nmt(text)
     src_vocab = d2lt.Vocab(source, min_freq=2,
                           reserved_tokens=['<pad>', '<bos>', '<eos>'])
     tgt_vocab = d2lt.Vocab(target, min_freq=2,
