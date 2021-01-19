@@ -25,7 +25,7 @@ def train(resume_training=True):
 
     EMBEDDING_SIZE = 32
     num_hiddens, num_layers, dropout, batch_size, num_steps = EMBEDDING_SIZE, 2, 0.1, 64, 10
-    lr, num_epochs, device = 0.005, 300, d2lt.try_gpu()
+    lr, num_epochs, device = 0.005, 1000, d2lt.try_gpu()
     ffn_num_input, ffn_num_hiddens, num_heads = EMBEDDING_SIZE, 64, 4
     key_size, query_size, value_size = EMBEDDING_SIZE, EMBEDDING_SIZE, EMBEDDING_SIZE
     norm_shape = [EMBEDDING_SIZE]
@@ -87,11 +87,11 @@ def train(resume_training=True):
                 metric.add(l.sum(), num_tokens)
         if (epoch + 1) % 10 == 0:
             # animator.add(epoch + 1, (metric[0] / metric[1],))
-            print(f'epoch {epoch + 1} - ' f'loss {metric[0] / metric[1]:.3f}')
+            print(f'epoch {epoch + 1} - ' f'loss {metric[0] / metric[1]:.5f}')
 
         ### Save checkpoint
         save_checkpoint(epoch, model, optimizer)
-    print(f'loss {metric[0] / metric[1]:.3f}, {metric[1] / timer.stop():.1f} '
+    print(f'loss {metric[0] / metric[1]:.5f}, {metric[1] / timer.stop():.1f} '
           f'tokens/sec on {str(device)}')
 
 
