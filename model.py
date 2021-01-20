@@ -10,7 +10,7 @@ class Seq2SeqEncoder(d2lt.Encoder):
         super(Seq2SeqEncoder, self).__init__(**kwargs)
         # Embedding layer
         self.embedding = nn.Embedding(vocab_size, embed_size)
-        self.rnn = nn.GRU(embed_size, num_hiddens, num_layers,
+        self.rnn = nn.LSTM(embed_size, num_hiddens, num_layers,
                           dropout=dropout)
 
     def forward(self, X, *args):
@@ -31,7 +31,7 @@ class Seq2SeqDecoder(d2lt.Decoder):
                  dropout=0, **kwargs):
         super(Seq2SeqDecoder, self).__init__(**kwargs)
         self.embedding = nn.Embedding(vocab_size, embed_size)
-        self.rnn = nn.GRU(embed_size + num_hiddens, num_hiddens, num_layers,
+        self.rnn = nn.LSTM(embed_size + num_hiddens, num_hiddens, num_layers,
                           dropout=dropout)
         self.dense = nn.Linear(num_hiddens, vocab_size)
 
