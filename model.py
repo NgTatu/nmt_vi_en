@@ -19,7 +19,7 @@ class Seq2SeqEncoder(d2lt.Encoder):
         # In RNN models, the first axis corresponds to time steps
         X = X.permute(1, 0, 2)
         # When state is not mentioned, it defaults to zeros
-        output, state = self.rnn(X)
+        output, (state, mem) = self.rnn(X)
         # `output` shape: (`num_steps`, `batch_size`, `num_hiddens`)
         # `state` shape: (`num_layers`, `batch_size`, `num_hiddens`)
         return output, state
@@ -44,7 +44,7 @@ class Seq2SeqDecoder(d2lt.Decoder):
         # Broadcast `context` so it has the same `num_steps` as `X`
         context = state[-1].repeat(X.shape[0], 1, 1)
         X_and_context = torch.cat((X, context), 2)
-        output, state = self.rnn(X_and_context, state)
+        output, (state, mem) = self.rnn(X_and_context, state)
         output = self.dense(output).permute(1, 0, 2)
         # `output` shape: (`batch_size`, `num_steps`, `vocab_size`)
         # `state` shape: (`num_layers`, `batch_size`, `num_hiddens`)
