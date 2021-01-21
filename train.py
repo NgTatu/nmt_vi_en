@@ -24,7 +24,7 @@ def xavier_init_weights(m):
 def train(resume_training=True):
     embed_size, num_hiddens, num_layers, dropout = 32, 32, 2, 0.1
     batch_size, num_steps = 64, 10
-    lr, num_epochs, device = 0.005, 300, d2lt.try_gpu()
+    lr, num_epochs, device = 0.005, 500, d2lt.try_gpu()
 
     ### Load data
     data_iter, src_vocab, tgt_vocab = load_data_nmt(batch_size, num_steps)
