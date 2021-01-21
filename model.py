@@ -36,18 +36,20 @@ class Seq2SeqDecoder(d2lt.Decoder):
         self.dense = nn.Linear(num_hiddens, vocab_size)
 
     def init_state(self, enc_outputs, *args):
-        return enc_outputs[1]
+        return enc_outputs[1],  enc_outputs[1]
 
-    def forward(self, X, state):
+    def forward(self, X, state, mem):
         # The output `X` shape: (`num_steps`, `batch_size`, `embed_size`)
         X = self.embedding(X).permute(1, 0, 2)
         # Broadcast `context` so it has the same `num_steps` as `X`
         context = state[-1].repeat(X.shape[0], 1, 1)
         X_and_context = torch.cat((X, context), 2)
-        output, (state, mem) = self.rnn(X_and_context, state)
+        output, (state, mem) = self.rnn(X_and_context, (state, mem))
         output = self.dense(output).permute(1, 0, 2)
         # `output` shape: (`batch_size`, `num_steps`, `vocab_size`)
         # `state` shape: (`num_layers`, `batch_size`, `num_hiddens`)
+        # print("state", state.shape)
+        # print("mem", mem.state)
         return output, state
 
 
@@ -168,6 +170,6 @@ class EncoderDecoder(nn.Module):
 
     def forward(self, enc_X, dec_X, *args):
         enc_outputs = self.encoder(enc_X, *args)
-        dec_state = self.decoder.init_state(enc_outputs, *args)
-        return self.decoder(dec_X, dec_state)
+        dec_state, dec_mem = self.decoder.init_state(enc_outputs, *args)
+        return self.decoder(dec_X, dec_state, dec_mem)
 
