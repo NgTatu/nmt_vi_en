@@ -1,0 +1,2 @@
+MODEL_CHECKPOINT_PATH = '/content/model/'
+PATH_MODEL = MODEL_CHECKPOINT_PATH + 'nmt.pt'
